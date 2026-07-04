@@ -116,9 +116,9 @@ function ProductEditor({ editing, categories, onClose }: { editing: Product | "n
     setErr(e);
     if (Object.keys(e).length) return;
     setBusy(true);
-    const status = publish ? "published" : form.status;
+    const status: "draft" | "published" = publish ? "published" : form.status;
     const payload = { title: form.title, price: Number(form.price), category_id: form.category_id, description: form.description, status };
-    const r = existing ? await updateProduct(existing.id, payload) : await createProduct(payload as any);
+    const r = existing ? await updateProduct(existing.id, payload) : await createProduct(payload);
     setBusy(false);
     if ((r as any)?.error) { setErr({ title: (r as any).error }); return; }
     onClose(); setLoadedFor(null); router.refresh();

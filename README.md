@@ -147,3 +147,41 @@ Your site is now live at **https://myrealm.io** with working sign-up and login. 
 The homepage hero now plays `public/background.mp4` behind the text (muted, looping).
 A still frame `public/background-poster.jpg` shows first for a fast load. Both files
 are already in the `public/` folder — nothing extra to configure.
+
+---
+
+## Optional: add demo data (so the site isn't empty)
+
+This fills the site with sample creators, painted miniatures and a review, plus
+ready-made demo logins. Do this AFTER Steps 1–5 work.
+
+You need **Node.js** first: go to https://nodejs.org, click the green **LTS**
+button, install it (just keep clicking Next).
+
+Then:
+1. Download your code folder to your computer (from GitHub: green **Code** button →
+   **Download ZIP**, then unzip). Skip if you already have the folder.
+2. Create a file named `.env` in the project folder (same place as package.json).
+   Put two lines in it, using values from Supabase → **Settings → API**:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your-service_role-secret-key
+   ```
+   ⚠️ Use the **service_role** key (the secret one), not the anon key.
+3. Open a terminal in that folder:
+   - **Windows:** open the folder in File Explorer, click the address bar, type
+     `cmd`, press Enter.
+   - **Mac:** right-click the folder → "New Terminal at Folder".
+4. Run these two commands, one at a time:
+   ```
+   npm install @supabase/supabase-js
+   npm run seed
+   ```
+5. Refresh your site — it's now full of demo content.
+
+**Demo logins** (password for all: `realmdemo123`):
+- Creator: `mara@demo.realm`
+- Buyer: `alex@demo.realm`
+
+To remove the demo data later, run `npm run seed` again (it resets), or delete the
+`@demo.realm` users in Supabase → **Authentication → Users**.
