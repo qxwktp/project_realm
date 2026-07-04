@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { ProductCard, CreatorCard } from "@/components/cards";
 import { Btn } from "@/components/controls";
 import { LogoMark, Mini, Badge, ACCENT, ACCENT2, LINE, INK, PANEL, MUTE, TEXT, stylePalIndex } from "@/components/ui";
-import { VideoBackdrop } from "@/components/video-bg";
 import type { Product, Profile, Category } from "@/types/db";
 
 export const revalidate = 30;
@@ -24,8 +23,7 @@ export default async function HomePage() {
 
   return (
     <div className="fade">
-      <section style={{ position: "relative", padding: "clamp(48px,7vw,88px) clamp(24px,4vw,56px)", margin: "20px 0 8px", display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 40, alignItems: "center", borderRadius: 24, border: `1px solid ${LINE}`, overflow: "hidden" }} className="hero">
-        <VideoBackdrop />
+      <section style={{ position: "relative", padding: "clamp(48px,7vw,88px) clamp(24px,4vw,56px)", margin: "20px 0 8px", display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 40, alignItems: "center", borderRadius: 24, border: `1px solid ${LINE}`, overflow: "hidden", background: `radial-gradient(120% 100% at 20% 20%, rgba(157,92,255,.16), transparent 55%), linear-gradient(160deg, ${PANEL}, ${INK})` }} className="hero">
         <div style={{ position: "relative", zIndex: 1 }}>
           <Badge tone="accent">Curated, not endless</Badge>
           <h1 className="serif" style={{ fontSize: "clamp(40px,6vw,68px)", lineHeight: 1.02, margin: "18px 0", fontWeight: 700 }}>
