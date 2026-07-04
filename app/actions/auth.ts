@@ -1,0 +1,77 @@
+"use server";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+
+export async function signIn(formData: FormData) {
+  const email = String(formData.get("email"));
+  const password = String(formData.get("password"));
+  const next = String(formData.get("next") || "/catalog");
+  const supabase = createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  redirect(next);
+}
+
+export async function signUp(formData: FormData) {
+  const email = String(formData.get("email"));
+  const password = String(formData.get("password"));
+  const role = String(formData.get("role") || "buyer");
+  const display_name = String(formData.get("display_name") || "");
+  const username = String(formData.get("username") || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+  const supabase = createClient();
+  const { error } = await supabase.auth.signUp({
+    email, password,
+    options: {
+      data: { role, display_name, username },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+    },
+  });
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
+export async function signOut() {
+  const supabase = createClient();
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/");
+}
+
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get("email"));
+  const supabase = createClient();
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=recovery`,
+  });
+  // Always report success — don't leak which emails exist.
+  return { ok: true };
+}
+
+export async function becomeCreator() {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in." };
+  const { error } = await supabase.from("profiles").update({ role: "creator" }).eq("id", user.id);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function updateProfile(patch: {
+  display_name?: string; bio?: string; socials?: Record<string, string>;
+}) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in." };
+  const clean: Record<string, unknown> = {};
+  if (typeof patch.display_name === "string") clean.display_name = patch.display_name.trim();
+  if (typeof patch.bio === "string") clean.bio = patch.bio.trim();
+  if (patch.socials) clean.socials = patch.socials;
+  const { error } = await supabase.from("profiles").update(clean).eq("id", user.id);
+  if (error) return { error: error.message };
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

@@ -1,0 +1,37 @@
+/* Realm design system — dark atelier, molten-bronze accent */
+:root {
+  --accent: #9d5cff;
+  --accent2: #c9a5ff;
+  --ink: #100d0a;
+  --panel: #191510;
+  --panel2: #221c15;
+  --line: rgba(157,92,255,0.18);
+  --text: #ece4d8;
+  --mute: #9a8d79;
+}
+* { box-sizing: border-box; }
+html, body { padding: 0; margin: 0; }
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--accent); color: var(--ink); }
+.serif { font-family: var(--font-cinzel), serif; letter-spacing: .02em; }
+.link { color: var(--accent2); cursor: pointer; }
+.link:hover { text-decoration: underline; }
+.container { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+input, textarea, select, button { font-family: inherit; }
+input::placeholder, textarea::placeholder { color: var(--mute); }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent2); outline-offset: 2px; border-radius: 6px;
+}
+@keyframes fade { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:none;} }
+.fade { animation: fade .4s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .8s linear infinite; }
+.card-hover { transition: transform .25s, border-color .25s, box-shadow .25s; }
+.card-hover:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 16px 40px -20px rgba(157,92,255,.5); }
+@media (prefers-reduced-motion: reduce){ * { animation: none !important; transition: none !important; } }
