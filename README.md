@@ -110,3 +110,82 @@ Done. Your site is live and login/signup will work.
   0003) and copied the whole file each time.
 
 You can always come back here and paste the exact error — I'll tell you the fix.
+
+---
+
+## Step 6 — Connect your domain: myrealm.io (10–15 min + wait)
+
+You already own **myrealm.io**. After Steps 1–5 are done and the site works on the
+`realm-xxxx.vercel.app` link:
+
+1. In Vercel: open your project → **Settings** → **Domains**.
+2. Type `myrealm.io` and click **Add**. Accept the option that also adds
+   `www.myrealm.io` with a redirect.
+3. Vercel shows you DNS records to add. Usually:
+   - **A** record for `myrealm.io` → `76.76.21.21`
+   - **CNAME** for `www` → `cname.vercel-dns.com`
+   (Use the exact values Vercel shows you.)
+4. Log in to the registrar where you bought myrealm.io, open **DNS settings**, and
+   add those records (A record host = `@`, CNAME host = `www`). Save.
+5. Back in Vercel the domain flips from "Pending" to a green **Valid** — this can
+   take anywhere from 10 minutes to a few hours. The `https://` certificate is
+   issued automatically.
+
+Then point the app at the real domain:
+6. Vercel → **Settings → Environment Variables** → set `NEXT_PUBLIC_SITE_URL` to
+   `https://myrealm.io`. Save.
+7. Supabase → **Authentication → URL Configuration** → set **Site URL** to
+   `https://myrealm.io` (add it to **Redirect URLs** too). Save.
+8. Vercel → **Deployments** → **⋯** on the latest → **Redeploy**.
+
+Your site is now live at **https://myrealm.io** with working sign-up and login. 🎉
+
+---
+
+## Note on the video background
+
+The homepage hero now plays `public/background.mp4` behind the text (muted, looping).
+A still frame `public/background-poster.jpg` shows first for a fast load. Both files
+are already in the `public/` folder — nothing extra to configure.
+
+---
+
+## Optional: add demo data (so the site isn't empty)
+
+This fills the site with sample creators, painted miniatures and a review, plus
+ready-made demo logins. Do this AFTER Steps 1–5 work.
+
+You need **Node.js** first: go to https://nodejs.org, click the green **LTS**
+button, install it (just keep clicking Next).
+
+Then:
+1. Download your code folder to your computer (from GitHub: green **Code** button →
+   **Download ZIP**, then unzip). Skip if you already have the folder.
+2. Create a file named `.env` in the project folder (same place as package.json).
+   Put two lines in it, using values from Supabase → **Settings → API**:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your-service_role-secret-key
+   ```
+   ⚠️ Use the **service_role** key (the secret one), not the anon key.
+3. Open a terminal in that folder:
+   - **Windows:** open the folder in File Explorer, click the address bar, type
+     `cmd`, press Enter.
+   - **Mac:** right-click the folder → "New Terminal at Folder".
+4. Run these two commands, one at a time:
+   ```
+   npm install @supabase/supabase-js
+   npm run seed
+   ```
+5. Refresh your site — it's now full of demo content.
+
+The demo also uploads two real product photos (a Batman-vs-Joker diorama and a
+Zeus figure) into your Storage and builds full product pages for them, so you can
+see image display, catalog, and product pages working end to end.
+
+**Demo logins** (password for all: `realmdemo123`):
+- Creator: `mara@demo.realm`
+- Buyer: `alex@demo.realm`
+
+To remove the demo data later, run `npm run seed` again (it resets), or delete the
+`@demo.realm` users in Supabase → **Authentication → Users**.

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/supabase/queries";
+import { getCurrentProfile, publicUrl } from "@/lib/supabase/queries";
 import { ProductCard } from "@/components/cards";
 import { Mini, Avatar, Badge, Stars, LINE, ACCENT2, MUTE, TEXT, PANEL, PANEL2, stylePalIndex } from "@/components/ui";
 import { ProductActions } from "./actions-ui";
@@ -18,7 +18,9 @@ async function load(id: string) {
   const { data: categories } = await supabase.from("categories").select("*");
   const { data: stat } = await supabase.from("creator_stats").select("*").eq("creator_id", product.creator_id).maybeSingle();
   const { data: more } = await supabase.from("products").select("*").eq("creator_id", product.creator_id).eq("status", "published").neq("id", id).limit(3);
-  return { product: product as Product, creator: creator as Profile, categories: (categories || []) as Category[], stat: stat || { avg_rating: 0, rating_count: 0 }, more: (more || []) as Product[] };
+  const { data: images } = await supabase.from("product_images").select("*").eq("product_id", id).order("sort");
+  const imageUrl = images && images.length ? publicUrl("products", images[0].path) : null;
+  return { product: product as Product, creator: creator as Profile, categories: (categories || []) as Category[], stat: stat || { avg_rating: 0, rating_count: 0 }, more: (more || []) as Product[], imageUrl };
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
@@ -36,7 +38,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
   const data = await load(params.id);
   const me = await getCurrentProfile();
   if (!data) notFound();
-  const { product, creator, categories, stat, more } = data;
+  const { product, creator, categories, stat, more, imageUrl } = data;
 
   const visible = product.status === "published" || me?.id === creator.id || me?.role === "admin";
   if (!visible) notFound();
@@ -58,7 +60,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
       <Link href="/catalog" className="link" style={{ fontSize: 13.5, color: MUTE }}>← Back to catalog</Link>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 36, marginTop: 16, alignItems: "start" }} className="prod">
         <div style={{ position: "sticky", top: 84 }}>
-          <Mini seed={product.id} palIndex={stylePalIndex(product.id)} ratio="1 / 1" />
+          <Mini seed={product.id} palIndex={stylePalIndex(product.id)} ratio="1 / 1" url={imageUrl} />
         </div>
         <div>
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>

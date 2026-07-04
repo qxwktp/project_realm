@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { publicUrl } from "@/lib/supabase/queries";
 import { ProductCard, CreatorCard } from "@/components/cards";
 import { Btn } from "@/components/controls";
 import { LogoMark, Mini, Badge, ACCENT, ACCENT2, LINE, INK, PANEL, MUTE, TEXT, stylePalIndex } from "@/components/ui";
@@ -14,11 +15,19 @@ export default async function HomePage() {
   const { data: categories } = await supabase.from("categories").select("*");
   const { data: stats } = await supabase.from("creator_stats").select("*");
   const { data: counts } = await supabase.from("products").select("creator_id").eq("status", "published");
+  const featuredIds = (products || []).map((p) => p.id);
+  const { data: images } = featuredIds.length
+    ? await supabase.from("product_images").select("product_id,path,sort").in("product_id", featuredIds).order("sort")
+    : { data: [] as any[] };
 
   const cat = (id: string | null) => (categories || []).find((c) => c.id === id) as Category | undefined;
   const creator = (id: string) => (creators || []).find((c) => c.id === id) as Profile | undefined;
   const stat = (id: string) => (stats || []).find((s) => s.creator_id === id) || { avg_rating: 0, rating_count: 0 };
   const pcount = (id: string) => (counts || []).filter((p) => p.creator_id === id).length;
+  const img = (pid: string) => {
+    const first = (images || []).find((i) => i.product_id === pid);
+    return first ? publicUrl("products", first.path) : null;
+  };
   const featured = (products || []) as Product[];
 
   return (
@@ -40,7 +49,7 @@ export default async function HomePage() {
         <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           {featured.slice(0, 4).map((p, i) => (
             <Link key={p.id} href={`/product/${p.id}`} className="card-hover" style={{ border: `1px solid ${LINE}`, borderRadius: 14, overflow: "hidden", transform: i % 2 ? "translateY(18px)" : "none", background: PANEL }}>
-              <Mini seed={p.id} palIndex={stylePalIndex(p.id)} ratio="1 / 1" />
+              <Mini seed={p.id} palIndex={stylePalIndex(p.id)} ratio="1 / 1" url={img(p.id)} />
               <div style={{ padding: "8px 10px", fontSize: 13, fontWeight: 600 }}>{p.title}</div>
             </Link>
           ))}
@@ -49,7 +58,7 @@ export default async function HomePage() {
 
       <SectionTitle n="01" title="Featured this week" action={<Link className="link" href="/catalog">View all →</Link>} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 18 }}>
-        {featured.map((p) => <ProductCard key={p.id} product={p} creator={creator(p.creator_id) || null} category={cat(p.category_id)} rating={stat(p.creator_id)} />)}
+        {featured.map((p) => <ProductCard key={p.id} product={p} creator={creator(p.creator_id) || null} category={cat(p.category_id)} rating={stat(p.creator_id)} imageUrl={img(p.id)} />)}
       </div>
 
       <SectionTitle n="02" title="Creators to know" action={<Link className="link" href="/creators">All creators →</Link>} />

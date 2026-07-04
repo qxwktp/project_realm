@@ -2,14 +2,14 @@ import Link from "next/link";
 import { Mini, Avatar, Badge, Stars, LINE, ACCENT2, MUTE, PANEL, stylePalIndex, publicUrlSafe } from "./card-helpers";
 import type { Product, Profile, Category } from "@/types/db";
 
-export function ProductCard({ product, creator, category, rating }: {
+export function ProductCard({ product, creator, category, rating, imageUrl }: {
   product: Product; creator: Profile | null; category?: Category | null;
-  rating?: { avg_rating: number; rating_count: number };
+  rating?: { avg_rating: number; rating_count: number }; imageUrl?: string | null;
 }) {
   return (
     <Link href={`/product/${product.id}`} className="card-hover" style={{ display: "block", border: `1px solid ${LINE}`, borderRadius: 16, overflow: "hidden", background: PANEL }}>
       <div style={{ position: "relative" }}>
-        <Mini seed={product.id} palIndex={stylePalIndex(product.id)} />
+        <Mini seed={product.id} palIndex={stylePalIndex(product.id)} url={imageUrl} />
         {category && <span style={{ position: "absolute", top: 10, left: 10 }}><Badge>{category.name}</Badge></span>}
         {product.status === "draft" && <span style={{ position: "absolute", top: 10, right: 10 }}><Badge tone="grey">draft</Badge></span>}
       </div>

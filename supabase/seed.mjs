@@ -60,6 +60,10 @@ const buyers = [
 ];
 
 const PRODUCTS = [
+  // The 6th element (when present) is a local photo file in ./seed-media that the
+  // script uploads to the 'products' storage bucket and links via product_images.
+  ["Batman vs Joker Diorama", "Collectibles", 120, "Hand-painted diorama, 1/10 scale. Batman and Joker mid-clash on a cobbled alley base with sculpted rubble and a working lamppost. A statement centrepiece.", "published", "batman-joker.jpg"],
+  ["Zeus, King of Olympus", "Heroes", 95, "Resin display figure, ~30cm. Greek god of thunder with freehand gold armour, marble-effect drapery and a hand-cut lightning bolt.", "published", "zeus.jpg"],
   ["Ashen Paladin", "Heroes", 42, "Resin, 32mm. Hand-painted NMM gold, freehand heraldry, cracked-earth base.", "published"],
   ["Bog Wraith", "Monsters", 38, "A drifting horror in muted greens with OSL from a spectral lantern.", "published"],
   ["Tavern Keeper", "NPCs", 24, "Friendly quest-giver, warm tones, apron and ale included.", "published"],
@@ -146,20 +150,51 @@ async function main() {
   PRODUCTS.forEach((p, i) => productIds.push({ spec: p, creator: creatorIds[i % creatorIds.length] }));
   const insertedProducts = [];
   for (const { spec, creator } of productIds) {
-    const [title, cat, price, description, status] = spec;
+    const [title, cat, price, description, status, photo] = spec;
     const { data, error } = await db.from("products").insert({
       creator_id: creator, category_id: catId(cat), title, description, price, status,
     }).select("id").single();
     if (error) throw error;
     insertedProducts.push({ id: data.id, creator });
+
+    // If this product has a real photo, upload it to Storage and link it.
+    if (photo) {
+      try {
+        const bytes = readFileSync(join(__dirname, "seed-media", photo));
+        // path is prefixed with the creator's id so it matches the storage RLS policy
+        const path = `${creator}/${data.id}/${photo}`;
+        const up = await db.storage.from("products").upload(path, bytes, {
+          contentType: "image/jpeg", upsert: true,
+        });
+        if (up.error) {
+          console.log(`   ⚠ could not upload ${photo}: ${up.error.message}`);
+        } else {
+          await db.from("product_images").insert({ product_id: data.id, path, sort: 0 });
+          console.log(`   ✓ uploaded ${photo}`);
+        }
+      } catch (e) {
+        console.log(`   ⚠ photo ${photo} not found or failed: ${e.message}`);
+      }
+    }
   }
 
   console.log("   adding portfolio pieces…");
+  // Upload the two real photos to the portfolio bucket and give each creator a
+  // couple of portfolio entries that point at real, viewable images.
+  const portfolioPhotos = ["batman-joker.jpg", "zeus.jpg"];
+  const uploadedPortfolio = [];
   for (const cid of creatorIds) {
-    for (let i = 0; i < 3; i++) {
-      await db.from("portfolio_items").insert({
-        creator_id: cid, title: `Commission ${i + 1}`, path: `demo/${cid}/${i}.jpg`, sort: i,
-      });
+    for (let i = 0; i < portfolioPhotos.length; i++) {
+      try {
+        const file = portfolioPhotos[i];
+        const bytes = readFileSync(join(__dirname, "seed-media", file));
+        const path = `${cid}/portfolio-${i}-${file}`;
+        const up = await db.storage.from("portfolio").upload(path, bytes, { contentType: "image/jpeg", upsert: true });
+        if (!up.error) {
+          await db.from("portfolio_items").insert({ creator_id: cid, title: `Commission ${i + 1}`, path, sort: i });
+          uploadedPortfolio.push(path);
+        }
+      } catch { /* skip if media missing */ }
     }
   }
 

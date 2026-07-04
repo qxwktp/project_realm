@@ -5,8 +5,8 @@ import { Input, Select, Btn, Empty } from "@/components/controls";
 import { MUTE } from "@/components/ui";
 import type { Product, Profile, Category } from "@/types/db";
 
-export function CatalogBrowser({ products, creators, categories, stats }: {
-  products: Product[]; creators: Profile[]; categories: Category[]; stats: any[];
+export function CatalogBrowser({ products, creators, categories, stats, imageMap }: {
+  products: Product[]; creators: Profile[]; categories: Category[]; stats: any[]; imageMap?: Record<string, string>;
 }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
@@ -55,7 +55,7 @@ export function CatalogBrowser({ products, creators, categories, stats }: {
         <>
           <div style={{ color: MUTE, fontSize: 13, marginBottom: 14 }}>{list.length} {list.length === 1 ? "piece" : "pieces"}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 18 }}>
-            {list.map((p) => <ProductCard key={p.id} product={p} creator={creator(p.creator_id)} category={cat(p.category_id)} rating={stat(p.creator_id)} />)}
+            {list.map((p) => <ProductCard key={p.id} product={p} creator={creator(p.creator_id)} category={cat(p.category_id)} rating={stat(p.creator_id)} imageUrl={imageMap?.[p.id] || null} />)}
           </div>
         </>
       )}
