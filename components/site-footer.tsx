@@ -10,10 +10,14 @@ export function SiteFooter() {
           <span className="serif" style={{ letterSpacing: ".1em", fontWeight: 700 }}>REALM</span>
           <span style={{ color: MUTE, fontSize: 13, marginLeft: 8 }}>Curated 3D-printed miniatures.</span>
         </div>
-        <div style={{ display: "flex", gap: 18, fontSize: 13.5 }}>
+        <div style={{ display: "flex", gap: 18, fontSize: 13.5, flexWrap: "wrap" }}>
           <Link href="/catalog" style={{ color: MUTE }}>Catalog</Link>
           <Link href="/creators" style={{ color: MUTE }}>Creators</Link>
           <Link href="/about" style={{ color: MUTE }}>About</Link>
+          <Link href="/faq" style={{ color: MUTE }}>FAQ</Link>
+          <Link href="/guidelines" style={{ color: MUTE }}>Guidelines</Link>
+          <Link href="/shipping" style={{ color: MUTE }}>Shipping & Returns</Link>
+          <Link href="/trust" style={{ color: MUTE }}>Trust & Safety</Link>
         </div>
       </div>
     </footer>

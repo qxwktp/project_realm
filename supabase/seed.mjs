@@ -59,19 +59,41 @@ const buyers = [
   { email: `noor@${DEMO_TAG}`, display_name: "Noor Haddad", username: "noorh" },
 ];
 
+// Each product: [title, browseSection, price, description, status, photo?, listing_category, tags[], base_kit_source?]
+// browseSection maps to a System-A category name (content type).
 const PRODUCTS = [
-  // The 6th element (when present) is a local photo file in ./seed-media that the
-  // script uploads to the 'products' storage bucket and links via product_images.
-  ["Batman vs Joker Diorama", "Collectibles", 120, "Hand-painted diorama, 1/10 scale. Batman and Joker mid-clash on a cobbled alley base with sculpted rubble and a working lamppost. A statement centrepiece.", "published", "batman-joker.jpg"],
-  ["Zeus, King of Olympus", "Heroes", 95, "Resin display figure, ~30cm. Greek god of thunder with freehand gold armour, marble-effect drapery and a hand-cut lightning bolt.", "published", "zeus.jpg"],
-  ["Ashen Paladin", "Heroes", 42, "Resin, 32mm. Hand-painted NMM gold, freehand heraldry, cracked-earth base.", "published"],
-  ["Bog Wraith", "Monsters", 38, "A drifting horror in muted greens with OSL from a spectral lantern.", "published"],
-  ["Tavern Keeper", "NPCs", 24, "Friendly quest-giver, warm tones, apron and ale included.", "published"],
-  ["Ruined Watchtower", "Terrain", 55, "Modular terrain piece, weathered stone and creeping ivy.", "published"],
-  ["Frost Drake Bust", "Busts", 60, "Display bust, 1/10 scale, icy blues and pearlescent scales.", "published"],
-  ["Shadow Assassin", "Heroes", 40, "Dark cloak with subtle purple glaze, blade with cold OSL.", "published"],
-  ["Ember Elemental", "Monsters", 45, "Glowing core, object-source lighting through cracked rock.", "published"],
-  ["Market Herbalist", "NPCs", 22, "Charming stall-keeper with tiny painted vials.", "draft"],
+  ["Caped Crusader vs the Clown Diorama", "Movies", 120,
+    "Hand-painted diorama, 1/10 scale. A masked vigilante and a grinning villain mid-clash on a cobbled alley base with sculpted rubble and a working lamppost. A fan-made tribute piece.",
+    "published", "batman-joker.jpg", "fan_inspired",
+    ["comic", "diorama", "vigilante", "fan-made"], ""],
+  ["Zeus, King of Olympus", "Original Designs", 95,
+    "Resin display figure, ~30cm. The thunder god with freehand gold armour, marble-effect drapery and a hand-cut lightning bolt. An original take on classical mythology.",
+    "published", "zeus.jpg", "original",
+    ["mythology", "greek", "god", "display"], ""],
+  ["Ashen Paladin", "Tabletop Games", 42,
+    "Resin, 32mm. Hand-painted NMM gold, freehand heraldry, cracked-earth base. Original character.",
+    "published", null, "original", ["knight", "fantasy", "32mm"], ""],
+  ["Bog Wraith", "Tabletop Games", 38,
+    "A drifting horror in muted greens with OSL from a spectral lantern.",
+    "published", null, "original", ["undead", "monster", "osl"], ""],
+  ["Tavern Keeper NPC", "Tabletop Games", 24,
+    "Friendly quest-giver, warm tones, apron and ale included.",
+    "published", null, "original", ["npc", "tavern", "fantasy"], ""],
+  ["Ruined Watchtower", "Tabletop Games", 55,
+    "Modular terrain piece, weathered stone and creeping ivy.",
+    "published", null, "original", ["terrain", "scenery", "modular"], ""],
+  ["Frost Drake Bust", "Original Designs", 60,
+    "Display bust, 1/10 scale, icy blues and pearlescent scales.",
+    "published", null, "original", ["dragon", "bust", "display"], ""],
+  ["Shadow Assassin", "Games", 40,
+    "Painting service on an officially purchasable rogue kit. Dark cloak with subtle purple glaze, blade with cold OSL.",
+    "published", null, "licensed_painting", ["rogue", "assassin", "painting-service"], "Official rogue miniature kit"],
+  ["Ember Elemental", "Games", 45,
+    "Glowing core, object-source lighting through cracked rock. Original creature design.",
+    "published", null, "original", ["elemental", "fire", "osl"], ""],
+  ["Market Herbalist NPC", "Tabletop Games", 22,
+    "Charming stall-keeper with tiny painted vials.",
+    "draft", null, "original", ["npc", "market", "fantasy"], ""],
 ];
 
 async function findUserByEmail(email) {
@@ -149,10 +171,21 @@ async function main() {
   const productIds = [];
   PRODUCTS.forEach((p, i) => productIds.push({ spec: p, creator: creatorIds[i % creatorIds.length] }));
   const insertedProducts = [];
+  // map a browse-section name to its content_type enum value
+  const contentTypeFor = (name) => ({
+    "Tabletop Games": "tabletop_games", "Movies": "movies", "Games": "games",
+    "Anime": "anime", "Original Designs": "original_designs",
+  }[name] || "original_designs");
   for (const { spec, creator } of productIds) {
-    const [title, cat, price, description, status, photo] = spec;
+    const [title, section, price, description, status, photo, listingCat, tags, baseKit] = spec;
     const { data, error } = await db.from("products").insert({
-      creator_id: creator, category_id: catId(cat), title, description, price, status,
+      creator_id: creator, category_id: catId(section), title, description, price, status,
+      content_type: contentTypeFor(section),
+      listing_category: listingCat,
+      base_kit_source: listingCat === "licensed_painting" ? (baseKit || "") : "",
+      license_confirmed: listingCat === "licensed_painting",
+      rights_attestation: listingCat === "fan_inspired",
+      tags: tags || [],
     }).select("id").single();
     if (error) throw error;
     insertedProducts.push({ id: data.id, creator });

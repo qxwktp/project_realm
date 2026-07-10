@@ -2,6 +2,8 @@
 export type UserRole = "buyer" | "creator" | "admin";
 export type ProductStatus = "draft" | "published" | "hidden";
 export type OrderStatus = "requested" | "accepted" | "closed" | "cancelled";
+export type ContentType = "tabletop_games" | "movies" | "games" | "anime" | "original_designs";
+export type ListingCategory = "original" | "licensed_painting" | "fan_inspired";
 
 export interface Profile {
   id: string;
@@ -26,8 +28,25 @@ export interface Product {
   description: string;
   price: number;
   status: ProductStatus;
+  content_type: ContentType;
+  listing_category: ListingCategory;
+  base_kit_source: string;
+  license_confirmed: boolean;
+  rights_attestation: boolean;
+  tags: string[];
+  ip_flags_count: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface ListingReport {
+  id: string;
+  product_id: string;
+  reporter_id: string | null;
+  reason: string;
+  details: string;
+  status: string;
+  created_at: string;
 }
 
 export interface ProductImage { id: string; product_id: string; path: string; sort: number; }

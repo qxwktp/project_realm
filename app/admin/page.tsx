@@ -16,6 +16,7 @@ export default async function AdminPage() {
   const { data: users } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
   const { data: products } = await supabase.from("products").select("*").order("created_at", { ascending: false });
   const { data: orders } = await supabase.from("orders").select("id,status");
+  const { data: reports } = await supabase.from("listing_reports").select("*").order("created_at", { ascending: false });
 
   return (
     <div className="fade" style={{ paddingTop: 32 }}>
@@ -24,6 +25,7 @@ export default async function AdminPage() {
         users={(users || []) as Profile[]}
         products={(products || []) as Product[]}
         orders={(orders || []) as Pick<Order, "id" | "status">[]}
+        reports={(reports || []) as any[]}
       />
     </div>
   );

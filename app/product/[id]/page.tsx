@@ -6,6 +6,8 @@ import { getCurrentProfile, publicUrl } from "@/lib/supabase/queries";
 import { ProductCard } from "@/components/cards";
 import { Mini, Avatar, Badge, Stars, LINE, ACCENT2, MUTE, TEXT, PANEL, PANEL2, stylePalIndex } from "@/components/ui";
 import { ProductActions } from "./actions-ui";
+import { ReportButton } from "./report-ui";
+import { listingCategoryLabel, listingCategoryTone, FAN_INSPIRED_DISCLAIMER } from "@/lib/taxonomy";
 import type { Product, Profile, Category } from "@/types/db";
 
 export const revalidate = 30;
@@ -63,14 +65,33 @@ export default async function ProductPage({ params }: { params: { id: string } }
           <Mini seed={product.id} palIndex={stylePalIndex(product.id)} ratio="1 / 1" url={imageUrl} />
         </div>
         <div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
             {cat && <Badge tone="accent">{cat.name}</Badge>}
+            <Badge tone={listingCategoryTone(product.listing_category)}>{listingCategoryLabel(product.listing_category)}</Badge>
             {product.status !== "published" && <Badge tone="grey">{product.status}</Badge>}
           </div>
           <h1 className="serif" style={{ fontSize: 34, margin: "0 0 8px" }}>{product.title}</h1>
           <div className="serif" style={{ fontSize: 26, color: ACCENT2, marginBottom: 4 }}>${Number(product.price).toFixed(0)}</div>
           <p style={{ fontSize: 12.5, color: MUTE, marginBottom: 20 }}>Information price — agree the final amount and shipping directly with the creator.</p>
-          <p style={{ fontSize: 15.5, lineHeight: 1.7, color: TEXT, marginBottom: 24 }}>{product.description}</p>
+          <p style={{ fontSize: 15.5, lineHeight: 1.7, color: TEXT, marginBottom: 16 }}>{product.description}</p>
+
+          {product.listing_category === "licensed_painting" && product.base_kit_source && (
+            <p style={{ fontSize: 14, color: MUTE, marginBottom: 16 }}>
+              Painting service on an official kit: <strong style={{ color: TEXT }}>{product.base_kit_source}</strong>
+            </p>
+          )}
+
+          {product.listing_category === "fan_inspired" && (
+            <p style={{ padding: 12, borderRadius: 12, background: "rgba(224,138,122,.08)", border: "1px solid rgba(224,138,122,.25)", fontSize: 13, fontStyle: "italic", color: "#e3a294", marginBottom: 16, lineHeight: 1.55 }}>
+              {FAN_INSPIRED_DISCLAIMER}
+            </p>
+          )}
+
+          {product.tags && product.tags.length > 0 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 24 }}>
+              {product.tags.map((t) => <Badge key={t} tone="grey">#{t}</Badge>)}
+            </div>
+          )}
 
           <Link href={`/creators/${creator.username}`} className="card-hover" style={{ display: "flex", gap: 12, alignItems: "center", padding: 14, border: `1px solid ${LINE}`, borderRadius: 14, background: PANEL, marginBottom: 20 }}>
             <Avatar name={creator.display_name} palIndex={stylePalIndex(creator.id)} url={creator.avatar_url} size={46} />
@@ -89,6 +110,11 @@ export default async function ProductPage({ params }: { params: { id: string } }
             </div>
           ) : (
             <ProductActions creator={creator} product={product} signedIn={!!me} />
+          )}
+          {!isOwn && (
+            <div style={{ marginTop: 16 }}>
+              <ReportButton productId={product.id} signedIn={!!me} />
+            </div>
           )}
         </div>
       </div>

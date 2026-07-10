@@ -4,21 +4,22 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Btn, Empty } from "@/components/controls";
 import { Mini, Avatar, Badge, LINE, ACCENT2, MUTE, PANEL, TEXT, stylePalIndex } from "@/components/ui";
-import { setProductHidden } from "@/app/actions/products";
-import type { Product, Profile, Order } from "@/types/db";
+import { setProductHidden, flagListing, setReportStatus } from "@/app/actions/products";
+import type { Product, Profile, Order, ListingReport } from "@/types/db";
 
-export function AdminClient({ users, products, orders }: {
-  users: Profile[]; products: Product[]; orders: Pick<Order, "id" | "status">[];
+export function AdminClient({ users, products, orders, reports }: {
+  users: Profile[]; products: Product[]; orders: Pick<Order, "id" | "status">[]; reports: ListingReport[];
 }) {
-  const [tab, setTab] = useState<"overview" | "products" | "users">("overview");
+  const [tab, setTab] = useState<"overview" | "products" | "users" | "reports">("overview");
 
+  const openReports = reports.filter((r) => r.status === "open").length;
   const stats: [string, number | string][] = [
     ["Users", users.length],
     ["Creators", users.filter((u) => u.role === "creator").length],
     ["Products", products.length],
     ["Published", products.filter((p) => p.status === "published").length],
     ["Orders", orders.length],
-    ["Completed", orders.filter((o) => o.status === "closed").length],
+    ["Open reports", openReports],
   ];
 
   const tabBtn = (k: typeof tab, label: string) => (
@@ -27,10 +28,11 @@ export function AdminClient({ users, products, orders }: {
 
   return (
     <>
-      <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${LINE}`, marginBottom: 22 }}>
+      <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${LINE}`, marginBottom: 22, flexWrap: "wrap" }}>
         {tabBtn("overview", "Overview")}
         {tabBtn("products", `Products (${products.length})`)}
         {tabBtn("users", `Users (${users.length})`)}
+        {tabBtn("reports", `Reports (${openReports})`)}
       </div>
 
       {tab === "overview" && (
@@ -60,7 +62,53 @@ export function AdminClient({ users, products, orders }: {
           ))}
         </div>
       )}
+
+      {tab === "reports" && <AdminReports reports={reports} products={products} />}
     </>
+  );
+}
+
+function AdminReports({ reports, products }: { reports: ListingReport[]; products: Product[] }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const product = (id: string) => products.find((p) => p.id === id);
+  if (!reports.length) return <Empty title="No reports" body="IP and content reports from users will appear here for review." />;
+
+  const removeAndFlag = async (r: ListingReport) => {
+    setBusy(r.id);
+    await flagListing(r.product_id);
+    await setReportStatus(r.id, "removed");
+    setBusy(null); router.refresh();
+  };
+  const dismiss = async (r: ListingReport) => {
+    setBusy(r.id);
+    await setReportStatus(r.id, "dismissed");
+    setBusy(null); router.refresh();
+  };
+
+  return (
+    <div style={{ display: "grid", gap: 10 }}>
+      {reports.map((r) => {
+        const p = product(r.product_id);
+        return (
+          <div key={r.id} style={{ border: `1px solid ${LINE}`, borderRadius: 12, padding: 14, background: PANEL }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
+              <strong style={{ fontSize: 14.5 }}>{p?.title || "Listing"}</strong>
+              <Badge tone={r.status === "open" ? "blue" : r.status === "removed" ? "red" : "grey"}>{r.status}</Badge>
+              <span style={{ color: MUTE, fontSize: 12.5, marginLeft: "auto" }}>{r.reason}</span>
+            </div>
+            {r.details && <p style={{ color: MUTE, fontSize: 13.5, margin: "0 0 10px", fontStyle: "italic" }}>&ldquo;{r.details}&rdquo;</p>}
+            {r.status === "open" && (
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn size="sm" variant="danger" onClick={() => removeAndFlag(r)} disabled={busy === r.id}>Remove & flag creator</Btn>
+                <Btn size="sm" variant="ghost" onClick={() => dismiss(r)} disabled={busy === r.id}>Dismiss</Btn>
+                {p && <Link href={`/product/${p.id}`}><Btn size="sm" variant="soft">View listing</Btn></Link>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

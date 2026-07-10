@@ -7,7 +7,8 @@ import { Modal } from "@/components/modal";
 import { Mini, Badge, LINE, ACCENT2, MUTE, PANEL, stylePalIndex } from "@/components/ui";
 import { OrdersList } from "@/app/orders/orders-list";
 import { createProduct, updateProduct, deleteProduct } from "@/app/actions/products";
-import type { Product, Order, Category, Profile, CreatorStats } from "@/types/db";
+import { CONTENT_TYPES, LISTING_CATEGORIES, RIGHTS_ATTESTATION_TEXT } from "@/lib/taxonomy";
+import type { Product, Order, Category, Profile, CreatorStats, ContentType, ListingCategory } from "@/types/db";
 
 export function DashboardClient({ me, products, orders, categories, buyers, stat }: {
   me: Profile; products: Product[]; orders: Order[]; categories: Category[]; buyers: Profile[]; stat: CreatorStats;
@@ -95,8 +96,15 @@ function ProductEditor({ editing, categories, onClose }: { editing: Product | "n
   const isNew = editing === "new";
   const open = !!editing;
   const existing = editing && editing !== "new" ? editing : null;
-  const [form, setForm] = useState({ title: "", price: "", category_id: categories[0]?.id || "", description: "", status: "draft" as "draft" | "published" });
-  const [err, setErr] = useState<{ title?: string; price?: string }>({});
+  const [form, setForm] = useState({
+    title: "", price: "", category_id: categories[0]?.id || "", description: "",
+    status: "draft" as "draft" | "published",
+    content_type: "original_designs" as ContentType,
+    listing_category: "original" as ListingCategory,
+    base_kit_source: "", license_confirmed: false, rights_attestation: false,
+    tags: "",
+  });
+  const [err, setErr] = useState<{ title?: string; price?: string; form?: string }>({});
   const [busy, setBusy] = useState(false);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
@@ -104,23 +112,55 @@ function ProductEditor({ editing, categories, onClose }: { editing: Product | "n
   const targetId = existing?.id || (isNew ? "new" : null);
   if (open && targetId !== loadedFor) {
     setLoadedFor(targetId);
-    if (existing) setForm({ title: existing.title, price: String(existing.price), category_id: existing.category_id || categories[0]?.id || "", description: existing.description, status: existing.status === "published" ? "published" : "draft" });
-    else setForm({ title: "", price: "", category_id: categories[0]?.id || "", description: "", status: "draft" });
+    if (existing) setForm({
+      title: existing.title, price: String(existing.price),
+      category_id: existing.category_id || categories[0]?.id || "",
+      description: existing.description, status: existing.status === "published" ? "published" : "draft",
+      content_type: existing.content_type || "original_designs",
+      listing_category: existing.listing_category || "original",
+      base_kit_source: existing.base_kit_source || "",
+      license_confirmed: !!existing.license_confirmed,
+      rights_attestation: !!existing.rights_attestation,
+      tags: (existing.tags || []).join(", "),
+    });
+    else setForm({
+      title: "", price: "", category_id: categories[0]?.id || "", description: "", status: "draft",
+      content_type: "original_designs", listing_category: "original",
+      base_kit_source: "", license_confirmed: false, rights_attestation: false, tags: "",
+    });
     setErr({});
   }
+
+  const tagList = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
 
   const save = async (publish: boolean) => {
     const e: typeof err = {};
     if (!form.title.trim()) e.title = "Title is required.";
     if (form.price === "" || Number(form.price) < 0 || !Number.isFinite(Number(form.price))) e.price = "Enter a valid price.";
+    // System B validation, mirrored from the server for instant feedback
+    if (form.content_type === "original_designs" && form.listing_category !== "original")
+      e.form = "Items in Original Designs must be classified as Original Design.";
+    if (form.listing_category === "licensed_painting") {
+      if (!form.base_kit_source.trim()) e.form = "Name the official product line (base kit source).";
+      else if (!form.license_confirmed) e.form = "Confirm this is an officially purchasable kit.";
+    }
+    if (form.listing_category === "fan_inspired" && !form.rights_attestation)
+      e.form = "You must accept the rights attestation for a Fan-Inspired listing.";
+    if (tagList.length < 1) e.form = "Add at least one tag (comma-separated).";
     setErr(e);
     if (Object.keys(e).length) return;
     setBusy(true);
     const status: "draft" | "published" = publish ? "published" : form.status;
-    const payload = { title: form.title, price: Number(form.price), category_id: form.category_id, description: form.description, status };
+    const payload = {
+      title: form.title, price: Number(form.price), category_id: form.category_id,
+      description: form.description, status,
+      content_type: form.content_type, listing_category: form.listing_category,
+      base_kit_source: form.base_kit_source, license_confirmed: form.license_confirmed,
+      rights_attestation: form.rights_attestation, tags: tagList,
+    };
     const r = existing ? await updateProduct(existing.id, payload) : await createProduct(payload);
     setBusy(false);
-    if ((r as any)?.error) { setErr({ title: (r as any).error }); return; }
+    if ((r as any)?.error) { setErr({ form: (r as any).error }); return; }
     onClose(); setLoadedFor(null); router.refresh();
   };
   const del = async () => {
@@ -129,14 +169,51 @@ function ProductEditor({ editing, categories, onClose }: { editing: Product | "n
     onClose(); setLoadedFor(null); router.refresh();
   };
 
+  // When content is Original Designs, force Original classification.
+  const onContentType = (ct: ContentType) => {
+    setForm((f) => ({ ...f, content_type: ct, listing_category: ct === "original_designs" ? "original" : f.listing_category }));
+  };
+
   return (
-    <Modal open={open} onClose={() => { onClose(); setLoadedFor(null); }} title={isNew ? "New product" : "Edit product"} width={520}>
+    <Modal open={open} onClose={() => { onClose(); setLoadedFor(null); }} title={isNew ? "New product" : "Edit product"} width={560}>
       <Field label="Title" error={err.title}><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Ashen Paladin" error={!!err.title} autoFocus /></Field>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label="Information price (USD)" error={err.price}><Input type="number" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="38" error={!!err.price} /></Field>
-        <Field label="Category"><Select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></Field>
+        <Field label="Browse section" hint="Where buyers find it"><Select value={form.content_type} onChange={(e) => onContentType(e.target.value as ContentType)}>{CONTENT_TYPES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</Select></Field>
       </div>
+
+      <Field label="Listing type" hint="This sets the rules and the badge shown to buyers.">
+        <Select value={form.listing_category} onChange={(e) => setForm({ ...form, listing_category: e.target.value as ListingCategory })} disabled={form.content_type === "original_designs"}>
+          {LISTING_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </Select>
+      </Field>
+
+      {form.listing_category === "licensed_painting" && (
+        <div style={{ padding: 12, borderRadius: 12, border: `1px solid ${LINE}`, background: PANEL, marginBottom: 14 }}>
+          <Field label="Official product line (base kit source)" hint="The officially purchasable kit you're painting.">
+            <Input value={form.base_kit_source} onChange={(e) => setForm({ ...form, base_kit_source: e.target.value })} placeholder="e.g. the official kit's product line name" />
+          </Field>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13.5, color: MUTE, cursor: "pointer" }}>
+            <input type="checkbox" checked={form.license_confirmed} onChange={(e) => setForm({ ...form, license_confirmed: e.target.checked })} style={{ marginTop: 3 }} />
+            <span>I confirm this is an officially purchasable, painting-ready kit, and this listing is a painting/finishing service on it.</span>
+          </label>
+        </div>
+      )}
+
+      {form.listing_category === "fan_inspired" && (
+        <div style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(224,138,122,.3)", background: "rgba(224,138,122,.06)", marginBottom: 14 }}>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, color: "#e3a294", cursor: "pointer", lineHeight: 1.5 }}>
+            <input type="checkbox" checked={form.rights_attestation} onChange={(e) => setForm({ ...form, rights_attestation: e.target.checked })} style={{ marginTop: 3 }} />
+            <span>{RIGHTS_ATTESTATION_TEXT}</span>
+          </label>
+        </div>
+      )}
+
       <Field label="Description" hint="Describe the finish, base, size, and what makes it yours."><Area value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Resin, hand-painted, 32mm scale…" /></Field>
+      <Field label="Tags" hint="Comma-separated. At least one. Buyers find franchises via tags & search, not menus." error={err.form}>
+        <Input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="knight, fantasy, 32mm" />
+      </Field>
+
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 4 }}>
         {existing ? <Btn variant="danger" onClick={del} disabled={busy}>Delete</Btn> : <span />}
         <div style={{ display: "flex", gap: 10 }}>

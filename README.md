@@ -43,7 +43,8 @@ Your code now lives on GitHub. ✅
 3. In the left menu, click **SQL Editor** → **New query**.
 4. Open the file `supabase/migrations/0001_init.sql` from your code, copy ALL of it,
    paste into the box, click **Run**. You should see "Success."
-5. Repeat step 4 for `0002_rls.sql`, then again for `0003_storage.sql`
+5. Repeat step 4 for `0002_rls.sql`, then `0003_storage.sql`, then
+   `0004_categories_ip.sql` — run them in that order.
    (run them in that order).
 
 Now get your keys:
@@ -189,3 +190,33 @@ see image display, catalog, and product pages working end to end.
 
 To remove the demo data later, run `npm run seed` again (it resets), or delete the
 `@demo.realm` users in Supabase → **Authentication → Users**.
+
+---
+
+## Category structure & IP compliance (new)
+
+This build implements the two-system model from the Category Structure Handoff:
+
+- **Browse sections (what buyers see):** Tabletop Games, Movies, Games, Anime,
+  Original Designs. These are generic descriptions of a medium — no brand names —
+  so they carry no trademark risk. They live in `content_type` on each product.
+- **Legal listing type (drives compliance):** Original Design, Licensed Miniature
+  Painting, or Fan-Inspired Design. Shown as a badge, not as navigation. Lives in
+  `listing_category`.
+
+The listing form enforces the rules: Licensed listings require an official product
+line + confirmation checkbox; Fan-Inspired listings require a rights attestation
+and automatically show an unofficial/fan-made disclaimer; Original Designs skip the
+extra fields. Every listing needs at least one creator-typed tag — buyers find
+franchises through tags and search, never through brand-named menus. Each listing
+has a Report button that routes to an admin review queue (Admin → Reports), where an
+admin can remove a listing and flag the creator.
+
+**Legal wording is not final.** All enum values and disclaimer/attestation text live
+in one file — `lib/taxonomy.ts` — so a real IP lawyer can adjust them in one place.
+Anything shown in `[brackets]` on the site (payment methods, verification process,
+the IP contact address, and the exact legal wording) is a deliberate placeholder
+that still needs a real decision before launch. Registering a Designated Agent with
+the US Copyright Office is a separate real-world step, not something in this codebase.
+
+New content pages: `/faq`, `/guidelines`, `/shipping`, `/trust` (linked in the footer).
